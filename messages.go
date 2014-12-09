@@ -104,11 +104,11 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
 		Provider_Business_Practice_Location_Address_Telephone_Number string
 	}
 	type list struct {
-		transaction int64
-		providers [] provider
+		Transaction int64
+		Providers [] provider
 	}
 	var MyList list
-	MyList.transaction=transactionid
+	MyList.Transaction=transactionid
 
 	//return detailed data of the selected providers
 	var querystring = "SELECT NPI,Provider_Full_Name,Provider_Full_Street, Provider_Full_City, Provider_Business_Practice_Location_Address_Telephone_Number FROM npidata2 WHERE ((NPI = '"+ npi1 +"')"
@@ -134,21 +134,9 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
 			&(item.Provider_Full_City), 
 			&(item.Provider_Business_Practice_Location_Address_Telephone_Number))
 		if err == nil {
-			MyList.providers = append(MyList.providers,item)
+			MyList.Providers = append(MyList.Providers,item)
 		}
 	}
-
-/*	
-	fmt.Fprintf(response, "----#%d#%s#%s#%s#%s#%s#----",
-		MyList.transaction,
-		MyList.providers[2].NPI, 
-		MyList.providers[2].Provider_Full_Name, 
-		MyList.providers[2].Provider_Full_Street, 
-		MyList.providers[2].Provider_Full_City,
-		MyList.providers[2].Provider_Business_Practice_Location_Address_Telephone_Number)
-	fmt.Fprintf(response, "step11")
-	return
-*/
 	
 	b, err := json.Marshal(MyList)
 	if err != nil { 
@@ -159,6 +147,73 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
 	//response.Header().Set("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
 	response.Write(b)
+}
+
+func transaction(response http.ResponseWriter, r *http.Request) {
+	//Only GET methods
+	if r.Method != "GET" {
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	
+	var params = r.URL.Query()
+	var id = params.Get("id")
+
+ 	//check params
+ 	if len(id)==0 {
+		response.WriteHeader(http.StatusNoContent)
+		return
+ 	}
+
+	var user="root"
+	var password="awsawsdb"
+	var database="healthylinkx"
+	con, err := sql.Open("mysql", user+":"+password+"@/"+database)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	defer con.Close()
+
+	//return detailed data of the selected providers
+	var querystring = "SELECT * FROM transactions WHERE (id = '"+ id +"')"
+
+	rows, err := con.Query(querystring)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+
+/*
+	$rlt = mysql_fetch_array($sql,MYSQL_ASSOC);
+	
+	//get the providers
+	$NPI1 = $rlt["NPI1"];
+	$NPI2 = $rlt["NPI1"];
+	$NPI3 = $rlt["NPI2"];
+	
+	//get the details of the providers
+	$query = "SELECT NPI,Provider_Full_Name,Provider_Full_Street, Provider_Full_City,
+		Provider_Business_Practice_Location_Address_Telephone_Number 
+ 		FROM npidata2 WHERE ((NPI = '$NPI1')";
+	if(!empty($NPI2))
+		$query .= "OR (NPI = '$NPI2')";
+	if(!empty($NPI3))
+		$query .= "OR (NPI = '$NPI3')";
+	$query .= ")";
+	
+	$sql = mysql_query($query, $this->db);
+
+	if(mysql_num_rows($sql) <= 0)
+		$this->response('no NPI record',204); // If no records "No Content" status
+		
+	$result = array();
+	while($rlt = mysql_fetch_array($sql,MYSQL_ASSOC))
+		$result[] = $rlt;
+
+	// If success everythig is good send header as "OK" and return list of providers in JSON format
+	$this->response($this->json($result), 200);
+
+*/	
 }
 
 func providers(response http.ResponseWriter, r *http.Request) {
@@ -185,8 +240,4 @@ func providers(response http.ResponseWriter, r *http.Request) {
 
 	//building the query string
 	fmt.Fprintf(response, "Hello providers! #%s#%s#%s#%s#%s#%s#%s#", gender, lastname1,lastname2,lastname3,specialty,distance,zipcode)
-}
-
-func transaction(response http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(response, "Hello transaction!")
 }
