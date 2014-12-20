@@ -7,6 +7,7 @@ import (
 	"encoding/json"
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
+	"io/ioutil"
 )
 
 func taxonomy(response http.ResponseWriter, r *http.Request) {
@@ -118,15 +119,15 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
  	if len(npi3)!=0 {
 		querystring += "OR (NPI = '" + npi3 +"')"
 	}
-	querystring += ")";
+	querystring += ")"
 	
-
 	rows, err := con.Query(querystring)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 	var item provider
+	
 	for rows.Next() {
 		err = rows.Scan(&(item.NPI), 
 			&(item.Provider_Full_Name), 
@@ -144,7 +145,7 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	//response.Header().Set("Content-Type", "application/json")
+	response.Header().Set("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
 	response.Write(b)
 }
@@ -175,45 +176,79 @@ func transaction(response http.ResponseWriter, r *http.Request) {
 	}
 	defer con.Close()
 
-	//return detailed data of the selected providers
+	//get list of the selected providers
 	var querystring = "SELECT * FROM transactions WHERE (id = '"+ id +"')"
 
 	rows, err := con.Query(querystring)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
-
-/*
-	$rlt = mysql_fetch_array($sql,MYSQL_ASSOC);
+	}
 	
-	//get the providers
-	$NPI1 = $rlt["NPI1"];
-	$NPI2 = $rlt["NPI1"];
-	$NPI3 = $rlt["NPI2"];
+	if !rows.Next(){
+	fmt.Fprintf(response, "no rows")
+		//response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	var empty, empty2, npi1, npi2, npi3 string
+		err = rows.Scan(&empty,
+			&empty2,
+			&npi1, 
+			&npi2, 
+			&npi3)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	rows.Close()
 	
 	//get the details of the providers
-	$query = "SELECT NPI,Provider_Full_Name,Provider_Full_Street, Provider_Full_City,
-		Provider_Business_Practice_Location_Address_Telephone_Number 
- 		FROM npidata2 WHERE ((NPI = '$NPI1')";
-	if(!empty($NPI2))
-		$query .= "OR (NPI = '$NPI2')";
-	if(!empty($NPI3))
-		$query .= "OR (NPI = '$NPI3')";
-	$query .= ")";
+	querystring = "SELECT NPI,Provider_Full_Name,Provider_Full_Street, Provider_Full_City, Provider_Business_Practice_Location_Address_Telephone_Number FROM npidata2 WHERE ((NPI = '" + npi1 + "')"
+ 	if len(npi2)!=0 {
+		querystring += "OR (NPI = '" + npi2 +"')"
+	}
+ 	if len(npi3)!=0 {
+		querystring += "OR (NPI = '" + npi3 +"')"
+	}
+	querystring += ")"
 	
-	$sql = mysql_query($query, $this->db);
+	rows2, err := con.Query(querystring)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
 
-	if(mysql_num_rows($sql) <= 0)
-		$this->response('no NPI record',204); // If no records "No Content" status
-		
-	$result = array();
-	while($rlt = mysql_fetch_array($sql,MYSQL_ASSOC))
-		$result[] = $rlt;
-
-	// If success everythig is good send header as "OK" and return list of providers in JSON format
-	$this->response($this->json($result), 200);
-
-*/	
+	type provider struct {
+		NPI string
+		Provider_Full_Name string
+		Provider_Full_Street string
+		Provider_Full_City string
+		Provider_Business_Practice_Location_Address_Telephone_Number string
+	}
+	var MyList [] provider	
+	var item provider
+	
+	for rows2.Next() {
+		err = rows2.Scan(&(item.NPI), 
+			&(item.Provider_Full_Name), 
+			&(item.Provider_Full_Street), 
+			&(item.Provider_Full_City), 
+			&(item.Provider_Business_Practice_Location_Address_Telephone_Number))
+		if err == nil {
+			MyList = append(MyList,item)
+		}
+	}
+	
+	b, err := json.Marshal(MyList)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	
+	response.Header().Set("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	response.Write(b)
 }
 
 func providers(response http.ResponseWriter, r *http.Request) {
@@ -237,7 +272,140 @@ func providers(response http.ResponseWriter, r *http.Request) {
 		response.WriteHeader(http.StatusNoContent)
 		return
  	}
-
+	
+	var user="root"
+	var password="awsawsdb"
+	var database="healthylinkx"
+	con, err := sql.Open("mysql", user+":"+password+"@/"+database)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	defer con.Close()	
+	
 	//building the query string
-	fmt.Fprintf(response, "Hello providers! #%s#%s#%s#%s#%s#%s#%s#", gender, lastname1,lastname2,lastname3,specialty,distance,zipcode)
+ 	var query = "SELECT NPI,Provider_Full_Name,Provider_Full_Street,Provider_Full_City FROM npidata2 WHERE ("
+ 	if len(lastname1)!=0{
+ 		query += "((Provider_Last_Name_Legal_Name = '" + lastname1 + "')"
+ 	}
+	if len(lastname2)!=0{
+ 		query += " OR (Provider_Last_Name_Legal_Name = '" + lastname2 + "')"
+ 	}
+	if len(lastname3) !=0{
+ 		query += " OR (Provider_Last_Name_Legal_Name = '" + lastname3 + "')"
+ 	}
+	if len(lastname1) !=0 {
+ 		query += ")"
+	}
+ 	if len(gender)!=0{
+ 		if len(lastname1)!=0{
+ 			query += " AND (Provider_Gender_Code = '" + gender + "')"
+ 		}else{
+ 			query += "(Provider_Gender_Code = '" + gender + "')"
+		}
+	}
+ 	if len(specialty)!=0{
+ 		if len(lastname1)!=0 || len(gender)!=0{
+ 			query += " AND (Classification = '" + specialty + "')"
+ 		}else{
+ 			query += "(Classification = '" + specialty + "')"
+		}
+	}
+		
+ 	//case 1: no need to calculate zip codes at a distance
+ 	if len(distance)==0 || len(zipcode)==0{
+ 		if len(zipcode)!=0{
+ 			if len(lastname1)!=0 || len(gender)!=0 || len(specialty)!=0{
+ 				query += " AND (Provider_Short_Postal_Code = '"+ zipcode + "')"
+ 			}else{
+ 				query += "(Provider_Short_Postal_Code = '" + zipcode + "')"
+			}
+		}
+		query += ") limit 50"
+	}else{
+	//case 2:we need to find zipcodes at a distance
+		//lets get a few zipcodes
+		var queryapi = "http://www.zipcodeapi.com/rest/GFfN8AXLrdjnQN08Q073p9RK9BSBGcmnRBaZb8KCl40cR1kI1rMrBEbKg4mWgJk7/radius.json/" + zipcode + "/" + distance + "/mile"
+
+		responseapi, err := http.Get(queryapi)
+		if err != nil { 
+			response.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+        defer responseapi.Body.Close()
+		
+        contents, err := ioutil.ReadAll(responseapi.Body)
+		if err != nil { 
+			response.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+		
+		//unmarshall json data
+		type Message struct {
+			Zip_code string
+			Distance float32
+			City string
+			State string
+		}
+		type ListMessage struct{
+			Zip_codes [] Message
+		}
+		var MyMessages ListMessage	
+
+		err = json.Unmarshal(contents, &MyMessages)
+		if err != nil { 
+			response.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+
+		//complete the query
+ 		if len(lastname1)!=0 || len(gender)!=0 || len(specialty)!=0{
+ 			query += " AND ((Provider_Short_Postal_Code = '" + MyMessages.Zip_codes[0].Zip_code + "')"
+ 		}else{
+ 			query += "((Provider_Short_Postal_Code = '" + MyMessages.Zip_codes[0].Zip_code + "')"
+		}
+		
+		var i int		
+		for i=1; i<len(MyMessages.Zip_codes);i++ {
+ 			query += " OR (Provider_Short_Postal_Code = '" + MyMessages.Zip_codes[i].Zip_code + "')"
+		}
+
+  		query += ")) limit 50"
+	}
+	
+	//lets make the query and retrieve the data to send back
+	type provider struct {
+		NPI string
+		Provider_Full_Name string
+		Provider_Full_Street string
+		Provider_Full_City string
+	}
+	var MyList [] provider
+
+	rows, err := con.Query(query)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	var item provider
+	
+	for rows.Next() {
+		err = rows.Scan(&(item.NPI), 
+			&(item.Provider_Full_Name), 
+			&(item.Provider_Full_Street), 
+			&(item.Provider_Full_City))
+		if err == nil {
+			MyList = append(MyList,item)
+		}
+	}
+	
+	b, err := json.Marshal(MyList)
+	if err != nil { 
+		response.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+	
+	response.Header().Set("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	response.Write(b)
 }
