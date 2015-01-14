@@ -3,12 +3,28 @@ package main
 import (
 	"net/http"
 	//"bytes"
-	"fmt"
+	//"fmt"
 	"encoding/json"
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 )
+
+/*
+type Database struct {
+	con *DB
+}
+
+func (d Database) Open() error { 
+	var user="root"
+	var password="awsawsdb"
+	var database="healthylinkx"
+
+	con, err := sql.Open("mysql", user + ":" + password + "@/" + database)
+
+	return err
+}
+*/
 
 func taxonomy(response http.ResponseWriter, r *http.Request) {
 	//Only GET methods
@@ -16,10 +32,14 @@ func taxonomy(response http.ResponseWriter, r *http.Request) {
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+	
+	//allow cross domain requests
+	response.Header().Set("Access-Control-Allow-Origin", "*")
+
 	var user="root"
 	var password="awsawsdb"
 	var database="healthylinkx"
-	con, err := sql.Open("mysql", user+":"+password+"@/"+database)
+	con, err := sql.Open("mysql", user + ":" + password + "@/" + database)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
@@ -63,6 +83,9 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+
+	//allow cross domain requests
+	response.Header().Set("Access-Control-Allow-Origin", "*")
 	
 	var params = r.URL.Query()
 	var npi1 = params.Get("NPI1")
@@ -156,6 +179,9 @@ func transaction(response http.ResponseWriter, r *http.Request) {
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+
+	//allow cross domain requests
+	response.Header().Set("Access-Control-Allow-Origin", "*")
 	
 	var params = r.URL.Query()
 	var id = params.Get("id")
@@ -186,13 +212,12 @@ func transaction(response http.ResponseWriter, r *http.Request) {
 	}
 	
 	if !rows.Next(){
-	fmt.Fprintf(response, "no rows")
-		//response.WriteHeader(http.StatusNotAcceptable)
+		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
 	var empty, empty2, npi1, npi2, npi3 string
-		err = rows.Scan(&empty,
+	err = rows.Scan(&empty,
 			&empty2,
 			&npi1, 
 			&npi2, 
@@ -257,6 +282,9 @@ func providers(response http.ResponseWriter, r *http.Request) {
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+
+	//allow cross domain requests
+	response.Header().Set("Access-Control-Allow-Origin", "*")
 	
 	var params = r.URL.Query()
 	var gender = params.Get("gender")
@@ -323,8 +351,8 @@ func providers(response http.ResponseWriter, r *http.Request) {
 		}
 		query += ") limit 50"
 	}else{
-	//case 2:we need to find zipcodes at a distance
-		//lets get a few zipcodes
+		//we need to find zipcodes at a distance
+		//lets get a few zipcodes! 	
 		var queryapi = "http://www.zipcodeapi.com/rest/GFfN8AXLrdjnQN08Q073p9RK9BSBGcmnRBaZb8KCl40cR1kI1rMrBEbKg4mWgJk7/radius.json/" + zipcode + "/" + distance + "/mile"
 
 		responseapi, err := http.Get(queryapi)
@@ -357,7 +385,7 @@ func providers(response http.ResponseWriter, r *http.Request) {
 			response.WriteHeader(http.StatusNotAcceptable)
 			return
 		}
-
+	
 		//complete the query
  		if len(lastname1)!=0 || len(gender)!=0 || len(specialty)!=0{
  			query += " AND ((Provider_Short_Postal_Code = '" + MyMessages.Zip_codes[0].Zip_code + "')"
