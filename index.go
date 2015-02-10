@@ -6,6 +6,9 @@ import (
 )
 
 func main(){
+
+	log.Printf("Starting the server ...")
+	
 	http.HandleFunc("/", http.NotFound)
 	http.HandleFunc("/taxonomy", taxonomy)
 	http.HandleFunc("/providers", providers)

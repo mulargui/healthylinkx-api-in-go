@@ -1,13 +1,13 @@
 package main
 
 import (
+	"net"
 	"net/http"
-	//"bytes"
-	//"fmt"
 	"encoding/json"
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
+	_ "log"
 )
 
 /*
@@ -39,7 +39,15 @@ func taxonomy(response http.ResponseWriter, r *http.Request) {
 	var user="root"
 	var password="awsawsdb"
 	var database="healthylinkx"
-	con, err := sql.Open("mysql", user + ":" + password + "@/" + database)
+	
+	//supporting docker containers
+	var host="MySQLDB"
+	hostaddr, err := net.LookupHost(host)
+	if err != nil { 
+		hostaddr[0]="127.0.0.1"
+	}
+		
+	con, err := sql.Open("mysql", user + ":" + password + "@tcp(" + hostaddr[0] + ":3306)/" + database)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
@@ -52,7 +60,7 @@ func taxonomy(response http.ResponseWriter, r *http.Request) {
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
-	
+
 	type Speciality struct {
 		Classification string
 	}
@@ -101,11 +109,20 @@ func shortlist(response http.ResponseWriter, r *http.Request) {
 	var user="root"
 	var password="awsawsdb"
 	var database="healthylinkx"
-	con, err := sql.Open("mysql", user+":"+password+"@/"+database)
+	
+	//supporting docker containers
+	var host="MySQLDB"
+	hostaddr, err := net.LookupHost(host)
+	if err != nil { 
+		hostaddr[0]="127.0.0.1"
+	}
+		
+	con, err := sql.Open("mysql", user + ":" + password + "@tcp(" + hostaddr[0] + ":3306)/" + database)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+	
 	defer con.Close()
 
 	transaction, err := con.Exec("INSERT INTO transactions VALUES (DEFAULT,DEFAULT,?,?,?)", npi1,npi2,npi3)
@@ -195,11 +212,20 @@ func transaction(response http.ResponseWriter, r *http.Request) {
 	var user="root"
 	var password="awsawsdb"
 	var database="healthylinkx"
-	con, err := sql.Open("mysql", user+":"+password+"@/"+database)
+	
+	//supporting docker containers
+	var host="MySQLDB"
+	hostaddr, err := net.LookupHost(host)
+	if err != nil { 
+		hostaddr[0]="127.0.0.1"
+	}
+		
+	con, err := sql.Open("mysql", user + ":" + password + "@tcp(" + hostaddr[0] + ":3306)/" + database)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+	
 	defer con.Close()
 
 	//get list of the selected providers
@@ -304,11 +330,20 @@ func providers(response http.ResponseWriter, r *http.Request) {
 	var user="root"
 	var password="awsawsdb"
 	var database="healthylinkx"
-	con, err := sql.Open("mysql", user+":"+password+"@/"+database)
+	
+	//supporting docker containers
+	var host="MySQLDB"
+	hostaddr, err := net.LookupHost(host)
+	if err != nil { 
+		hostaddr[0]="127.0.0.1"
+	}
+		
+	con, err := sql.Open("mysql", user + ":" + password + "@tcp(" + hostaddr[0] + ":3306)/" + database)
 	if err != nil { 
 		response.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
+	
 	defer con.Close()	
 	
 	//building the query string
